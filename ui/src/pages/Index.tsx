@@ -109,16 +109,16 @@ const Index = () => {
               </div>
             </div>
             <h2 className="text-3xl font-bold mb-4 text-foreground">
-              连接您的钱包
+              Connect Your Wallet
             </h2>
             <p className="text-muted-foreground mb-8">
-              通过连接钱包安全访问您的加密用药记录。
-              您的数据受到区块链级别的安全保护。
+              Securely access your encrypted medication logs by connecting your wallet.
+              Your data is protected with blockchain-level security.
             </p>
             <Alert className="mb-6 border-primary/20 bg-primary/5">
               <Shield className="h-4 w-4 text-primary" />
               <AlertDescription className="text-sm">
-                您的用药数据已加密，只能通过您连接的钱包访问。
+                Your medication data is encrypted and can only be accessed with your connected wallet.
               </AlertDescription>
             </Alert>
           </div>
