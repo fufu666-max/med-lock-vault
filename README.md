@@ -2,6 +2,16 @@
 
 A secure, encrypted medication record storage system built on FHEVM (Fully Homomorphic Encryption Virtual Machine). Users can store their medication records (name, dosage, time, notes) encrypted on-chain, with only the user or authorized healthcare professionals able to decrypt and view the data.
 
+## 🚀 Live Demo
+
+Try the application live: **[https://med-lock-vault.vercel.app/](https://med-lock-vault.vercel.app/)**
+
+## 📹 Demo Video
+
+Watch the demo video to see Med Lock Vault in action:
+
+**[Demo Video](https://github.com/WinifredSamson/med-lock-vault/blob/main/med-lock-vault.mp4)**
+
 ## Features
 
 - **End-to-End Encryption**: All medication data is encrypted using FHEVM before being stored on-chain
@@ -38,6 +48,274 @@ med-lock-vault/
 │   └── public/             # Static assets
 └── hardhat.config.ts       # Hardhat configuration
 ```
+
+## Smart Contract
+
+### Contract Overview
+
+The `EncryptedMedicationRecord` contract stores encrypted medication data on-chain using FHEVM. Each medication record contains:
+
+- **Encrypted Name Hash** (`euint32`): Hash of the medication name, encrypted
+- **Encrypted Dosage Value** (`euint32`): Dosage value, encrypted
+- **Timestamp** (`uint256`): Plain timestamp for sorting (not encrypted)
+- **Owner** (`address`): Address of the record owner
+
+### Contract Code
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {FHE, euint32, externalEuint32} from "@fhevm/solidity/lib/FHE.sol";
+import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
+
+contract EncryptedMedicationRecord is SepoliaConfig {
+    struct EncryptedMedication {
+        euint32 nameHash;        // Hash of medication name (encrypted)
+        euint32 dosageValue;     // Dosage value (encrypted)
+        uint256 timestamp;       // Plain timestamp for sorting
+        address owner;           // Owner of the record
+    }
+
+    mapping(address => EncryptedMedication[]) private _userMedications;
+    mapping(address => uint256) private _recordCount;
+
+    // Add encrypted medication record
+    function addMedicationRecord(
+        externalEuint32 encryptedNameHash,
+        externalEuint32 encryptedDosageValue,
+        bytes calldata nameProof,
+        bytes calldata dosageProof
+    ) external {
+        euint32 nameHash = FHE.fromExternal(encryptedNameHash, nameProof);
+        euint32 dosageValue = FHE.fromExternal(encryptedDosageValue, dosageProof);
+        
+        EncryptedMedication memory newRecord = EncryptedMedication({
+            nameHash: nameHash,
+            dosageValue: dosageValue,
+            timestamp: block.timestamp,
+            owner: msg.sender
+        });
+        
+        _userMedications[msg.sender].push(newRecord);
+        _recordCount[msg.sender]++;
+
+        // Grant decryption permissions to the user
+        FHE.allowThis(nameHash);
+        FHE.allow(nameHash, msg.sender);
+        FHE.allowThis(dosageValue);
+        FHE.allow(dosageValue, msg.sender);
+    }
+
+    // Get encrypted medication record
+    function getMedicationRecord(
+        address user,
+        uint256 index
+    ) external view returns (
+        euint32 nameHash,
+        euint32 dosageValue,
+        uint256 timestamp
+    ) {
+        require(index < _recordCount[user], "Record index out of bounds");
+        EncryptedMedication memory record = _userMedications[user][index];
+        return (record.nameHash, record.dosageValue, record.timestamp);
+    }
+
+    // Grant access to authorized addresses
+    function grantAccess(address authorizedAddress, uint256 recordIndex) external {
+        require(recordIndex < _recordCount[msg.sender], "Record index out of bounds");
+        EncryptedMedication storage record = _userMedications[msg.sender][recordIndex];
+        require(record.owner == msg.sender, "Only owner can grant access");
+        
+        FHE.allow(record.nameHash, authorizedAddress);
+        FHE.allow(record.dosageValue, authorizedAddress);
+    }
+}
+```
+
+### Key Contract Functions
+
+#### `addMedicationRecord`
+Adds a new encrypted medication record to the blockchain.
+
+**Parameters:**
+- `encryptedNameHash`: Encrypted hash of medication name (euint32)
+- `encryptedDosageValue`: Encrypted dosage value (euint32)
+- `nameProof`: FHE input proof for name hash
+- `dosageProof`: FHE input proof for dosage value
+
+**Process:**
+1. Converts external encrypted values to internal `euint32` using `FHE.fromExternal()`
+2. Creates a new `EncryptedMedication` struct
+3. Stores the record in the user's medication array
+4. Grants decryption permissions to the user with `FHE.allow()`
+5. Emits `MedicationRecordAdded` event
+
+#### `getMedicationRecord`
+Retrieves an encrypted medication record for a user.
+
+**Parameters:**
+- `user`: User address
+- `index`: Record index
+
+**Returns:**
+- `nameHash`: Encrypted name hash (euint32)
+- `dosageValue`: Encrypted dosage value (euint32)
+- `timestamp`: Plain timestamp
+
+#### `getRecordCount`
+Returns the total number of records for a user.
+
+#### `grantAccess`
+Grants decryption permission to an authorized address (e.g., doctor or caregiver).
+
+**Parameters:**
+- `authorizedAddress`: Address to grant access to
+- `recordIndex`: Index of the record to grant access to
+
+## Encryption & Decryption Logic
+
+### Encryption Flow
+
+The encryption process happens client-side before data is sent to the blockchain:
+
+1. **Client-Side Data Preparation**:
+   ```typescript
+   // Convert medication name to hash
+   function hashString(str: string): number {
+     let hash = 0;
+     for (let i = 0; i < str.length; i++) {
+       const char = str.charCodeAt(i);
+       hash = ((hash << 5) - hash) + char;
+       hash = hash & hash; // Convert to 32-bit integer
+     }
+     return Math.abs(hash);
+   }
+
+   // Extract numeric value from dosage string (e.g., "100mg" -> 100)
+   function extractDosageValue(dosage: string): number {
+     const match = dosage.match(/\d+/);
+     return match ? parseInt(match[0], 10) : 0;
+   }
+   ```
+
+2. **FHEVM Encryption**:
+   ```typescript
+   // Encrypt name hash
+   const encryptedNameHashInput = fhevmInstance.createEncryptedInput(
+     contractAddress,
+     userAddress
+   );
+   encryptedNameHashInput.add32(nameHash);
+   const encryptedNameHash = await encryptedNameHashInput.encrypt();
+   // Returns: { handles: string[], inputProof: string }
+
+   // Encrypt dosage value
+   const encryptedDosageInput = fhevmInstance.createEncryptedInput(
+     contractAddress,
+     userAddress
+   );
+   encryptedDosageInput.add32(dosageValue);
+   const encryptedDosage = await encryptedDosageInput.encrypt();
+   ```
+
+3. **On-Chain Submission**:
+   ```typescript
+   const tx = await contract.addMedicationRecord(
+     encryptedNameHash.handles[0],      // Encrypted handle
+     encryptedDosage.handles[0],        // Encrypted handle
+     encryptedNameHash.inputProof,      // Cryptographic proof
+     encryptedDosage.inputProof        // Cryptographic proof
+   );
+   ```
+
+4. **Contract Processing**:
+   - Contract verifies the input proofs using `FHE.fromExternal()`
+   - Converts external encrypted values to internal `euint32`
+   - Stores encrypted data in the user's medication array
+   - Grants decryption permissions: `FHE.allow(encryptedValue, user)`
+
+### Decryption Flow
+
+The decryption process happens client-side after fetching encrypted data from the contract:
+
+1. **Get Encrypted Handles**:
+   ```typescript
+   // Fetch encrypted record from contract
+   const [encryptedNameHash, encryptedDosageValue, timestamp] = 
+     await contract.getMedicationRecord(userAddress, index);
+   
+   let nameHashHandle = ethers.hexlify(encryptedNameHash);
+   let dosageHandle = ethers.hexlify(encryptedDosageValue);
+   ```
+
+2. **Generate Decryption Keypair**:
+   ```typescript
+   // Generate keypair for EIP712 signature
+   const keypair = fhevmInstance.generateKeypair();
+   ```
+
+3. **Create EIP712 Signature**:
+   ```typescript
+   // Create EIP712 typed data for decryption request
+   const eip712 = fhevmInstance.createEIP712(
+     keypair.publicKey,
+     [contractAddress],
+     startTimestamp,
+     durationDays
+   );
+   
+   // Sign with user's wallet
+   const signature = await signer.signTypedData(
+     eip712.domain,
+     { UserDecryptRequestVerification: eip712.types.UserDecryptRequestVerification },
+     eip712.message
+   );
+   ```
+
+4. **Decrypt**:
+   ```typescript
+   // For local network, remove "0x" prefix from signature
+   const signatureForDecrypt = chainId === 31337 
+     ? signature.replace("0x", "") 
+     : signature;
+   
+   // Decrypt using FHEVM instance
+   const decryptedResult = await fhevmInstance.userDecrypt(
+     [
+       { handle: nameHashHandle, contractAddress },
+       { handle: dosageHandle, contractAddress }
+     ],
+     keypair.privateKey,
+     keypair.publicKey,
+     signatureForDecrypt,
+     [contractAddress],
+     userAddress,
+     startTimestamp,
+     durationDays
+   );
+   
+   // Extract decrypted values
+   const decryptedNameHash = Number(decryptedResult[nameHashHandle] || 0);
+   const decryptedDosage = Number(decryptedResult[dosageHandle] || 0);
+   ```
+
+### Key Encryption/Decryption Details
+
+#### Encryption Types
+- **`euint32`**: Encrypted 32-bit unsigned integer (internal format)
+- **`externalEuint32`**: External format for passing encrypted values as function parameters
+- **Handle Format**: 66 characters (0x + 64 hex characters)
+
+#### FHE Operations
+- **`FHE.fromExternal()`**: Converts external encrypted value to internal format and verifies input proof
+- **`FHE.allow()`**: Grants decryption permissions to specific addresses
+- **`FHE.allowThis()`**: Grants decryption permission to the contract itself
+
+#### Security Features
+- **Input Proof Verification**: All encrypted inputs are verified on-chain before being accepted
+- **Permission-Based Decryption**: Only authorized addresses can decrypt data
+- **No Plaintext Storage**: Data is never stored in plaintext on the blockchain
 
 ## Setup
 
@@ -185,39 +463,6 @@ npx hardhat test test/EncryptedMedicationRecordSepolia.ts --network sepolia
 ### Granting Access
 
 The contract includes a `grantAccess` function that allows users to grant decryption permissions to authorized addresses (e.g., doctors or caregivers). This functionality can be added to the UI in future iterations.
-
-## Contract Functions
-
-### `addMedicationRecord`
-Adds a new encrypted medication record to the blockchain.
-
-**Parameters:**
-- `encryptedNameHash`: Encrypted hash of medication name (euint32)
-- `encryptedDosageValue`: Encrypted dosage value (euint32)
-- `nameProof`: FHE input proof for name hash
-- `dosageProof`: FHE input proof for dosage value
-
-### `getMedicationRecord`
-Retrieves an encrypted medication record for a user.
-
-**Parameters:**
-- `user`: User address
-- `index`: Record index
-
-**Returns:**
-- `nameHash`: Encrypted name hash
-- `dosageValue`: Encrypted dosage value
-- `timestamp`: Plain timestamp
-
-### `getRecordCount`
-Returns the total number of records for a user.
-
-### `grantAccess`
-Grants decryption permission to an authorized address.
-
-**Parameters:**
-- `authorizedAddress`: Address to grant access to
-- `recordIndex`: Index of the record to grant access to
 
 ## Testing
 
