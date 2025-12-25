@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,9 +75,22 @@ export const MedicationDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{medication ? "Edit Medication" : "Add Medication"}</DialogTitle>
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.2 }}
+          >
+            <DialogTitle>{medication ? "Edit Medication" : "Add Medication"}</DialogTitle>
+          </motion.div>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+
+        <motion.form
+          onSubmit={handleSubmit}
+          className="space-y-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.3 }}
+        >
           <div className="space-y-2">
             <Label htmlFor="name">Medication Name</Label>
             <Input
@@ -155,15 +169,20 @@ export const MedicationDialog = ({
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Saving..." : medication ? "Update" : "Add"} Medication
-            </Button>
-          </div>
-        </form>
+              <motion.div
+                className="flex justify-end gap-3 pt-4"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.2 }}
+              >
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? "Saving..." : medication ? "Update" : "Add"} Medication
+                </Button>
+              </motion.div>
+              </motion.form>
       </DialogContent>
     </Dialog>
   );

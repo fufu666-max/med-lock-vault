@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Header } from "@/components/Header";
 import { MedicationCard, Medication } from "@/components/MedicationCard";
 import { MedicationDialog } from "@/components/MedicationDialog";
@@ -47,7 +48,7 @@ function recordToMedication(record: { nameHash: number; dosageValue: number; tim
 
 const Index = () => {
   const { isConnected } = useAccount();
-  const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
+  const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS || "0x5FbDB2315678afecb367f032d93F642f64180aa3";
   const { records, isLoading, message, addMedicationRecord, loadRecords } = useMedicationRecord(contractAddress);
   
   const [medications, setMedications] = useState<Medication[]>([]);
@@ -98,8 +99,18 @@ const Index = () => {
     return (
       <>
         <Header />
-        <div className="min-h-[calc(100vh-80px)] flex items-center justify-center bg-gradient-to-b from-background to-medical-secondary/20">
-          <div className="text-center max-w-md px-4">
+        <motion.div
+          className="min-h-[calc(100vh-80px)] flex items-center justify-center bg-gradient-to-b from-background to-medical-secondary/20"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <motion.div
+            className="text-center max-w-md px-4"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
             <div className="mb-6 inline-block">
               <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto relative">
                 <Shield className="w-10 h-10 text-primary" />
@@ -121,8 +132,8 @@ const Index = () => {
                 Your medication data is encrypted and can only be accessed with your connected wallet.
               </AlertDescription>
             </Alert>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </>
     );
   }
@@ -131,10 +142,24 @@ const Index = () => {
   return (
     <>
       <Header />
-      <main className="min-h-[calc(100vh-80px)] bg-gradient-to-b from-background to-medical-secondary/20">
-        <div className="container mx-auto px-4 py-8">
-          <div className="mb-8 flex items-center justify-between">
-            <div>
+      <motion.main
+        className="min-h-[calc(100vh-80px)] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-medical-secondary/30 via-background to-background"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="container max-w-7xl mx-auto px-4 py-12">
+          <motion.div
+          className="mb-8 flex items-center justify-between"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
               <h2 className="text-2xl font-bold text-foreground mb-2">
                 Your Medications
               </h2>
@@ -142,12 +167,18 @@ const Index = () => {
                 <Lock className="w-4 h-4" />
                 All entries are encrypted and secure
               </p>
-            </div>
-            <Button onClick={handleAddNew} className="gap-2" disabled={isLoading}>
-              <Plus className="w-4 h-4" />
-              Add Medication
-            </Button>
-          </div>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              <Button onClick={handleAddNew} className="gap-2" disabled={isLoading}>
+                <Plus className="w-4 h-4" />
+                Add Medication
+              </Button>
+            </motion.div>
+          </motion.div>
 
           <ContractStatus 
             contractAddress={contractAddress}
@@ -155,40 +186,121 @@ const Index = () => {
             isLoading={isLoading}
           />
 
-          {isLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-          ) : medications.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 rounded-2xl bg-medical-secondary flex items-center justify-center mx-auto mb-4">
-                <Plus className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-foreground">
-                No medications logged yet
-              </h3>
-              <p className="text-muted-foreground mb-6">
-                Start tracking your medications securely
-              </p>
-              <Button onClick={handleAddNew} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Add Your First Medication
-              </Button>
-            </div>
+          <AnimatePresence mode="wait">
+            {isLoading ? (
+              <motion.div
+                key="loading"
+                className="flex flex-col items-center justify-center py-32 rounded-3xl border-2 border-dashed border-primary/10 bg-primary/5"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="relative">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    className="w-20 h-20 rounded-full border-4 border-primary/20 border-t-primary"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Shield className="w-8 h-8 text-primary animate-pulse" />
+                  </div>
+                </div>
+                <motion.p 
+                  className="mt-8 text-xl font-medium text-primary/80 tracking-wide"
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  Securing your health data...
+                </motion.p>
+              </motion.div>
+            ) : medications.length === 0 ? (
+              <motion.div
+                key="empty"
+                className="text-center py-24 px-6 rounded-3xl border-2 border-dashed border-muted-foreground/20 bg-card/30 backdrop-blur-sm"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.4 }}
+              >
+                <motion.div
+                  className="w-24 h-24 rounded-3xl bg-primary/10 flex items-center justify-center mx-auto mb-8 relative"
+                  initial={{ scale: 0, rotate: -45 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ delay: 0.2, duration: 0.5, type: "spring" }}
+                >
+                  <Plus className="w-12 h-12 text-primary" />
+                  <motion.div 
+                    className="absolute -inset-2 rounded-3xl bg-primary/5 -z-10"
+                    animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.8, 0.5] }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                  />
+                </motion.div>
+                <motion.h3
+                  className="text-3xl font-bold mb-4 text-foreground"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3, duration: 0.3 }}
+                >
+                  No medications logged yet
+                </motion.h3>
+                <motion.p
+                  className="text-xl text-muted-foreground mb-10 max-w-lg mx-auto"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.3 }}
+                >
+                  Start tracking your medications securely with end-to-end encryption. 
+                  Your health data is your own.
+                </motion.p>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5, duration: 0.3 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button onClick={handleAddNew} className="gap-2 h-12 px-8 text-lg shadow-lg shadow-primary/20">
+                    <Plus className="w-5 h-5" />
+                    Add Your First Medication
+                  </Button>
+                </motion.div>
+              </motion.div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {medications.map((medication) => (
-                <MedicationCard
-                  key={medication.id}
-                  medication={medication}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
+            <motion.div
+              key="medications"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <AnimatePresence>
+                {medications.map((medication, index) => (
+                  <motion.div
+                    key={medication.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{
+                      duration: 0.3,
+                      delay: index * 0.1,
+                      ease: [0.4, 0, 0.2, 1]
+                    }}
+                  >
+                    <MedicationCard
+                      medication={medication}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
-      </main>
+      </motion.main>
 
       <MedicationDialog
         open={dialogOpen}

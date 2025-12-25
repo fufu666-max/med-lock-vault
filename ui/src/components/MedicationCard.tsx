@@ -1,4 +1,5 @@
 import { Pill, Lock, Clock, Calendar, Edit, Trash2 } from "lucide-react";
+import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,72 +23,119 @@ interface MedicationCardProps {
 
 export const MedicationCard = ({ medication, onEdit, onDelete }: MedicationCardProps) => {
   return (
-    <Card className="group hover:shadow-medical transition-all duration-300 border-border/50">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-start gap-3">
-            <div className="relative">
-              <div className="w-12 h-12 rounded-xl bg-medical-secondary flex items-center justify-center">
-                <Pill className="w-6 h-6 text-primary" />
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{
+        y: -4,
+        transition: { duration: 0.2 }
+      }}
+      transition={{
+        duration: 0.3,
+        ease: [0.4, 0, 0.2, 1]
+      }}
+    >
+      <Card className="group hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 border-border/50 cursor-pointer overflow-hidden bg-card/50 backdrop-blur-sm">
+        <div className="absolute top-0 left-0 w-1.5 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <CardContent className="p-8">
+          <div className="flex items-start justify-between mb-8">
+            <div className="flex items-start gap-5">
+              <div className="relative">
+                <motion.div 
+                  className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center"
+                  whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <Pill className="w-8 h-8 text-primary" />
+                </motion.div>
+                <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-secure flex items-center justify-center border-2 border-background shadow-sm">
+                  <Lock className="w-3.5 h-3.5 text-white" />
+                </div>
               </div>
-              <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-secure flex items-center justify-center">
-                <Lock className="w-3 h-3 text-white" />
+              <div>
+                <h3 className="text-xl font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{medication.name}</h3>
+                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 px-3 py-0.5">
+                  {medication.dosage}
+                </Badge>
               </div>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-foreground mb-1">{medication.name}</h3>
-              <p className="text-sm text-muted-foreground">{medication.dosage}</p>
-            </div>
-          </div>
-          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onEdit(medication)}
-              className="h-8 w-8 p-0"
+            <motion.div
+              className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0"
+              initial={{ scale: 0.8 }}
+              whileHover={{ scale: 1 }}
+              transition={{ duration: 0.2 }}
             >
-              <Edit className="w-4 h-4" />
-            </Button>
-            {onDelete && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onDelete(medication.id)}
-                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <Trash2 className="w-4 h-4" />
-              </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(medication);
+                  }}
+                  className="h-10 w-10 p-0 rounded-full hover:bg-primary/10 hover:text-primary"
+                >
+                  <Edit className="w-5 h-5" />
+                </Button>
+              </motion.div>
+              {onDelete && (
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(medication.id);
+                    }}
+                    className="h-10 w-10 p-0 rounded-full hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </Button>
+                </motion.div>
+              )}
+            </motion.div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-base">
+              <div className="p-2 rounded-lg bg-muted">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <span className="text-foreground font-semibold">{medication.frequency}</span>
+            </div>
+
+            <div className="flex flex-wrap gap-2 pl-11">
+              {medication.time.map((time, index) => (
+                <Badge key={index} variant="secondary" className="font-medium px-4 py-1 rounded-full bg-secondary/50 text-secondary-foreground">
+                  {time}
+                </Badge>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3 text-sm text-muted-foreground border-t border-border/50 pt-4 mt-6">
+              <Calendar className="w-4 h-4" />
+              <span className="font-medium">
+                {new Date(medication.startDate).toLocaleDateString(undefined, { dateStyle: 'long' })}
+                {medication.endDate && ` — ${new Date(medication.endDate).toLocaleDateString(undefined, { dateStyle: 'long' })}`}
+              </span>
+            </div>
+
+            {medication.notes && (
+              <div className="bg-muted/30 rounded-xl p-4 mt-4">
+                <p className="text-sm text-muted-foreground leading-relaxed italic">
+                  "{medication.notes}"
+                </p>
+              </div>
             )}
           </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm">
-            <Clock className="w-4 h-4 text-muted-foreground" />
-            <span className="text-foreground font-medium">{medication.frequency}</span>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {medication.time.map((time, index) => (
-              <Badge key={index} variant="secondary" className="font-normal">
-                {time}
-              </Badge>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Calendar className="w-4 h-4" />
-            <span>
-              {new Date(medication.startDate).toLocaleDateString()}
-              {medication.endDate && ` - ${new Date(medication.endDate).toLocaleDateString()}`}
-            </span>
-          </div>
-
-          {medication.notes && (
-            <p className="text-sm text-muted-foreground pt-2 border-t">{medication.notes}</p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };
